@@ -2,10 +2,9 @@
 pragma solidity ^0.8.0;
 
 /**
- * @author  .
- * @title   .
- * @dev     .
- * @notice  .
+ * @author  Pradhumna Pancholi
+ * @title   A simple Address Book
+ * @dev     This contract is just used for experimentation
  */
 contract AddressBook {
 
@@ -16,27 +15,26 @@ contract AddressBook {
         string note;
     }
 
-    //mapping to link user with their addressbook//
+    /**
+     * @dev  mapping to link user with their addressbook
+     */
     mapping (address => Record[]) private _aBook;
 
     /**
-     * @notice  .
-     * @dev     .
-     * @param   _str  .
-     * @return  uint256  .
+     * @notice  Calculates and returns the length of a string in number of bytes
+     * @param   _str  The input string
+     * @return  uint256  The length of the input string in number of bytes
      */
     function getStringLength(string memory _str) public pure returns (uint256){
         bytes memory bts = bytes(_str);
         return bts.length;
     }
     
-    //function to add an address//
     /**
-     * @notice  .
-     * @dev     .
-     * @param   _name  .
-     * @param   _addr  .
-     * @param   _note  .
+     * @notice  Add a new record to the user's address book
+     * @param   _name  Name associated with the address. Must have at least one character
+     * @param   _addr  Address to be added
+     * @param   _note  Any additional notes or comments for the address
      */
     function addAddress(string memory _name, address _addr,string memory _note) public   {
         require(getStringLength(_name) >= 1, "Name can not be empty");
@@ -44,11 +42,9 @@ contract AddressBook {
         _aBook[msg.sender].push(newRecord);
     }
     
-    //function to get a user's addeess book//
     /**
-     * @notice  .
-     * @dev     .
-     * @return  .
+     * @notice  Get the user's address book
+     * @return  Record[] The address book
      */
     function getAddrBook() public view returns (Record[] memory){
         return _aBook[msg.sender];
