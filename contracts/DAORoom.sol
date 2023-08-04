@@ -9,7 +9,7 @@ pragma solidity ^0.8.0;
  */
 contract DAORoom {
     
-    /// @notice  Address of the owner of the DAO Room
+    /// @notice  Address of the owner of a DAO Room
     address payable public owner;
 
     /// @notice  The cost to rent a DAO Room
@@ -17,7 +17,8 @@ contract DAORoom {
 
     enum Status {Vacant, Occupied}
 
-    Status currentStatus;
+    /// @notice  The occupancy status a DAO Room
+    Status public currentStatus;
 
     /// @dev  Event to determine when a room becomes occupied and who occupies it
     event Occupied(address _occupant);
@@ -35,15 +36,14 @@ contract DAORoom {
     }
 
     /**
-     * @notice  When attempting to rent, the room must be vacant and you must pay 1 wei
+     * @notice  When attempting to rent, the room must be vacant and you must pay exactly 1 wei
      * @dev     The function will emit an Occupied event with the address of the renter
      */
     function rent() external payable onlyWhenVacant {
-        require(msg.value != cost, "Insufficient funds");
+        require(msg.value == cost, "Payment of exactly 1 wei is required");
         owner.transfer(msg.value);
+        currentStatus = Status.Occupied;
         emit Occupied(msg.sender);
     } 
-
-
 
 }
