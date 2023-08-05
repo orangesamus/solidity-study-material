@@ -19,75 +19,79 @@ describe("DAO Room", function () {
         return { receipt, cost };
     }
 
-    it("Should set the right owner", async function () {
-        const { room, owner } = await loadFixture(deployDAORoomFixture);
-        expect(await room.owner()).to.equal(owner.address);
+    describe("Deployment", function () {
+        it("Should set the right owner", async function () {
+            const { room, owner } = await loadFixture(deployDAORoomFixture);
+            expect(await room.owner()).to.equal(owner.address);
+        });
+
+        it("Should cost 1 wei to rent", async function () {
+            const { room, owner } = await loadFixture(deployDAORoomFixture);
+            expect(await room.cost()).to.equal(1);
+        });
+
+        it("Should start as a vacant room", async function () {
+            const { room, owner } = await loadFixture(deployDAORoomFixture);
+            expect(await room.currentStatus()).to.equal(0);
+        });
     });
 
-    it("Should cost 1 wei to rent", async function () {
-        const { room, owner } = await loadFixture(deployDAORoomFixture);
-        expect(await room.cost()).to.equal(1);
-    });
+    describe("Rent Function", function () {
+        it("Should allow a user to rent the room", async function () {
+            const { room, owner, addr1 } = await loadFixture(deployDAORoomFixture);
+            await rentRoom(room, addr1);
+        });
 
-    it("Should start as a vacant room", async function () {
-        const { room, owner } = await loadFixture(deployDAORoomFixture);
-        expect(await room.currentStatus()).to.equal(0);
-    });
+        it("Should update the Status to 'Occupied' when it is rented", async function () {
+            const { room, owner, addr1 } = await loadFixture(deployDAORoomFixture);
+            await rentRoom(room, addr1);
+            expect(await room.currentStatus()).to.equal(1);
+        });
 
-    it("Should allow a user to rent the room", async function () {
-        const { room, owner, addr1 } = await loadFixture(deployDAORoomFixture);
-        await rentRoom(room, addr1);
-    });
+        it("Should emit 'Occupied' event when it is rented", async function () {
+            const { room, owner, addr1 } = await loadFixture(deployDAORoomFixture);
 
-    it("Should update the Status to 'Occupied' when it is rented", async function () {
-        const { room, owner, addr1 } = await loadFixture(deployDAORoomFixture);
-        await rentRoom(room, addr1);
-        expect(await room.currentStatus()).to.equal(1);
-    });
+            const cost = ethers.parseUnits("1", "wei");
+            await expect(room.connect(addr1).rent({ value: cost }))
+                .to.emit(room, "Occupied").withArgs(addr1.address);
+        });
 
-    it("Should emit 'Occupied' event when it is rented", async function () {
-        const { room, owner, addr1 } = await loadFixture(deployDAORoomFixture);
+        it("Should fail to rent the room if the cost is incorrect", async function () {
+            const { room, owner, addr1 } = await loadFixture(deployDAORoomFixture);
 
-        const cost = ethers.parseUnits("1", "wei");
-        await expect(room.connect(addr1).rent({ value: cost }))
-          .to.emit(room, "Occupied").withArgs(addr1.address);
-    });
+            await expect(
+                room.connect(addr1).rent()
+            ).to.be.revertedWith("Payment of exactly 1 wei is required");
 
-    it("Should fail to rent the room if the cost is incorrect", async function () {
-        const { room, owner, addr1 } = await loadFixture(deployDAORoomFixture);
+            const cost1 = ethers.parseUnits("0", "wei");
+            await expect(
+                room.connect(addr1).rent({ value: cost1 })
+            ).to.be.revertedWith("Payment of exactly 1 wei is required");
 
-        await expect(
-            room.connect(addr1).rent()
-        ).to.be.revertedWith("Payment of exactly 1 wei is required");
+            const cost2 = ethers.parseUnits("2", "wei");
+            await expect(
+                room.connect(addr1).rent({ value: cost2 })
+            ).to.be.revertedWith("Payment of exactly 1 wei is required");
+        });
 
-        const cost1 = ethers.parseUnits("0", "wei");
-        await expect(
-            room.connect(addr1).rent({ value: cost1 })
-        ).to.be.revertedWith("Payment of exactly 1 wei is required");
+        it("Should update balances of the Owner and Renter", async function () {
+            const { room, owner, addr1 } = await loadFixture(deployDAORoomFixture);
 
-        const cost2 = ethers.parseUnits("2", "wei");
-        await expect(
-            room.connect(addr1).rent({ value: cost2 })
-        ).to.be.revertedWith("Payment of exactly 1 wei is required");
-    });
+            // Get the initial balances of Renter and Owner
+            const initialRenterBalance = await ethers.provider.getBalance(addr1.address);
+            const initialOwnerBalance = await ethers.provider.getBalance(owner.address);
 
-    it("Should update balances of the Owner and Renter", async function () {
-        const { room, owner, addr1 } = await loadFixture(deployDAORoomFixture);
+            // Rent room, calculate the amount of Eth spent on gas
+            const { receipt, cost } = await rentRoom(room, addr1);
+            const gasSpent = receipt.gasUsed * receipt.gasPrice;
 
-        // Get the initial balances of Renter and Owner
-        const initialRenterBalance = await ethers.provider.getBalance(addr1.address);
-        const initialOwnerBalance = await ethers.provider.getBalance(owner.address);
+            // Get the updated balances of Renter and Owner
+            const updatedRenterBalance = await ethers.provider.getBalance(addr1.address);
+            const updatedOwnerBalance = await ethers.provider.getBalance(owner.address);
 
-        // Rent room, calculate the amount of Eth spent on gas
-        const { receipt, cost } = await rentRoom(room, addr1);
-        const gasSpent = receipt.gasUsed * receipt.gasPrice;
-
-        // Get the updated balances of Renter and Owner
-        const updatedRenterBalance = await ethers.provider.getBalance(addr1.address);
-        const updatedOwnerBalance = await ethers.provider.getBalance(owner.address);
-
-        // Perform assertions to check the balance changes
-        expect(updatedRenterBalance).to.equal(initialRenterBalance - cost - gasSpent);
-        expect(updatedOwnerBalance).to.equal(initialOwnerBalance + cost);
+            // Perform assertions to check the balance changes
+            expect(updatedRenterBalance).to.equal(initialRenterBalance - cost - gasSpent);
+            expect(updatedOwnerBalance).to.equal(initialOwnerBalance + cost);
+        });
     });
 });
