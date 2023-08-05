@@ -75,13 +75,14 @@ contract MyToken is ERC20 {
      * @return  bool  Returns true if tokens transfer successfully, otherwise returns false
      */
     function transfer(address _to, uint256 _value) public override returns (bool) {
-        if(_value > 0 &&  _value <= balanceOf(msg.sender)) {
-            _balanceOf[msg.sender] -= _value;
-            _balanceOf[_to] += _value; 
-            emit Transfer(msg.sender, _to, _value);
-            return true;
-        }
-        return false;
+        require(_value > 0, "Transfer amount must be greater than zero");
+        require(_value <= _balanceOf[msg.sender], "Insufficient balance");
+
+        _balanceOf[msg.sender] -= _value;
+        _balanceOf[_to] += _value; 
+
+        emit Transfer(msg.sender, _to, _value);
+        return true;
     }
 
     /**
