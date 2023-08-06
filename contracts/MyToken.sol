@@ -86,20 +86,6 @@ contract MyToken is ERC20 {
     }
 
     /**
-     * @notice  Find out if an address is a contract
-     * @dev     Return true if the assembly bytecode size is > 0
-     * @param   _addr  Address to check
-     * @return  bool  True or False if the address is a contract
-     */
-    function isContract(address _addr) public view returns (bool) {
-        uint codeSize;
-        assembly {
-            codeSize := extcodesize(_addr)
-        }
-        return codeSize > 0;  
-    }
-
-    /**
      * @notice  Spender calling the function can transfer tokens if approved to do so by allowances
      * @dev     Allowances must have approved spender and at least the amount transferred. Balances update, transfer event emitted
      * @param   _from  Address tokens are transferred from
