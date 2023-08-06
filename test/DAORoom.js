@@ -59,10 +59,6 @@ describe("DAO Room", function () {
         it("Should fail to rent the room if the cost is incorrect", async function () {
             const { room, owner, addr1 } = await loadFixture(deployDAORoomFixture);
 
-            await expect(
-                room.connect(addr1).rent()
-            ).to.be.revertedWith("Payment of exactly 1 wei is required");
-
             const cost1 = ethers.parseUnits("0", "wei");
             await expect(
                 room.connect(addr1).rent({ value: cost1 })
@@ -73,25 +69,14 @@ describe("DAO Room", function () {
                 room.connect(addr1).rent({ value: cost2 })
             ).to.be.revertedWith("Payment of exactly 1 wei is required");
         });
-
+        
         it("Should update balances of the Owner and Renter", async function () {
             const { room, owner, addr1 } = await loadFixture(deployDAORoomFixture);
 
-            // Get the initial balances of Renter and Owner
-            const initialRenterBalance = await ethers.provider.getBalance(addr1.address);
-            const initialOwnerBalance = await ethers.provider.getBalance(owner.address);
-
-            // Rent room, calculate the amount of Eth spent on gas
-            const { receipt, cost } = await rentRoom(room, addr1);
-            const gasSpent = receipt.gasUsed * receipt.gasPrice;
-
-            // Get the updated balances of Renter and Owner
-            const updatedRenterBalance = await ethers.provider.getBalance(addr1.address);
-            const updatedOwnerBalance = await ethers.provider.getBalance(owner.address);
-
-            // Perform assertions to check the balance changes
-            expect(updatedRenterBalance).to.equal(initialRenterBalance - cost - gasSpent);
-            expect(updatedOwnerBalance).to.equal(initialOwnerBalance + cost);
+            const cost = ethers.parseUnits("1", "wei");
+            await expect(
+                room.connect(addr1).rent({ value: cost })
+            ).to.changeEtherBalances([addr1, owner], [-cost, cost]);
         });
     });
 });
