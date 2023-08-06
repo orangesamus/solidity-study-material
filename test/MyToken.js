@@ -21,29 +21,119 @@ describe("My Token", function () {
     describe("Transfer Function", function () {
         it("Should fail if value is zero", async function () {
             const { myToken, owner, addr1 } = await loadFixture(deployTokenFixture);
-            const initialOwnerBalance = await myToken.balanceOf(owner.address);
-            const initialAddr1Balance = await myToken.balanceOf(addr1.address);
 
             await expect(
                 myToken.transfer(addr1.address, 0)
             ).to.be.revertedWith("Transfer amount must be greater than zero");
-
-            expect(await myToken.balanceOf(owner.address)).to.equal(initialOwnerBalance);
-            expect(await myToken.balanceOf(addr1.address)).to.equal(initialAddr1Balance);
         });
 
         it("Should fail if value is greater than sender's balance", async function () {
             const { myToken, owner, addr1 } = await loadFixture(deployTokenFixture);
-            const initialOwnerBalance = await myToken.balanceOf(owner.address);
-            const initialAddr1Balance = await myToken.balanceOf(addr1.address);
 
             const value = ethers.parseUnits("1", 0);
             await expect(
                 myToken.connect(addr1).transfer(owner.address, value)
             ).to.be.revertedWith("Insufficient balance");
+        });
 
-            expect(await myToken.balanceOf(owner.address)).to.equal(initialOwnerBalance);
-            expect(await myToken.balanceOf(addr1.address)).to.equal(initialAddr1Balance);
+        it("Should update token balances", async function () {
+            const { myToken, owner, addr1 } = await loadFixture(deployTokenFixture);
+
+            const value = ethers.parseUnits("50", 0);
+            await expect(myToken.transfer(addr1.address, value)).to.changeTokenBalances(
+                myToken,
+                [owner, addr1],
+                [-50,50]
+            );
+        });
+
+        it("Should emit Transfer event", async function () {
+            const { myToken, owner, addr1 } = await loadFixture(deployTokenFixture);
+
+            const value = ethers.parseUnits("50", 0);
+            await expect(myToken.transfer(addr1.address, value))
+            .to.emit(myToken, "Transfer").withArgs(owner.address, addr1.address, value);
+        });
+    });
+
+    describe("TransferFrom Function", function () {
+        it("Should fail if value is zero", async function () {
+            const { myToken, owner, addr1 } = await loadFixture(deployTokenFixture);
+
+            await expect(
+                myToken.transferFrom(owner.address, addr1.address, 0)
+            ).to.be.revertedWith("Transfer amount must be greater than zero");
+        });
+
+        it("Should fail if value is greater than sender's balance", async function () {
+            const { myToken, owner, addr1 } = await loadFixture(deployTokenFixture);
+
+            const value = ethers.parseUnits("1", 0);
+            await expect(
+                myToken.transferFrom(addr1.address, owner.address, value)
+            ).to.be.revertedWith("Insufficient balance");
+        });
+        
+        describe("Approve Function", function () {
+            it("Should update allowances", async function () {
+                const { myToken, owner, addr1 } = await loadFixture(deployTokenFixture);
+
+                const value = ethers.parseUnits("50", 0);
+                await myToken.approve(addr1.address, value);
+                expect(await myToken.allowance(owner.address, addr1.address)).to.equal(value);
+            });
+
+            it("Should emit Approval event", async function () {
+                const { myToken, owner, addr1 } = await loadFixture(deployTokenFixture);
+
+                const value = ethers.parseUnits("50", 0);
+                await expect(myToken.approve(addr1.address, value))
+                .to.emit(myToken, "Approval").withArgs(owner.address, addr1.address, value);
+            });
+        });
+
+        it("Should fail if value exceeds allowances", async function () {
+            const { myToken, owner, addr1 } = await loadFixture(deployTokenFixture);
+
+            const value = ethers.parseUnits("50", 0);
+            const exceedValue = ethers.parseUnits("51", 0);
+            await myToken.approve(addr1.address, value);
+            await expect(
+                myToken.connect(addr1).transferFrom(owner.address, addr1.address, exceedValue)
+            ).to.be.revertedWith("Transfer amount exceeds allowance");
+        });
+
+        it("Should update token balances", async function () {
+            const { myToken, owner, addr1 } = await loadFixture(deployTokenFixture);
+
+            const value = ethers.parseUnits("50", 0);
+            await myToken.approve(addr1.address, value);
+            await expect(
+                myToken.connect(addr1).transferFrom(owner.address, addr1.address, value)
+            ).to.changeTokenBalances(
+                myToken,
+                [owner, addr1],
+                [-50,50]
+            );
+        });
+
+        it("Should update allowances", async function () {
+            const { myToken, owner, addr1 } = await loadFixture(deployTokenFixture);
+
+            const value = ethers.parseUnits("50", 0);
+            await myToken.approve(addr1.address, value);
+            await myToken.connect(addr1).transferFrom(owner.address, addr1.address, value);
+            expect(await myToken.allowance(owner.address, addr1.address)).to.equal(0);
+        });
+
+        it("Should emit Transfer event", async function () {
+            const { myToken, owner, addr1 } = await loadFixture(deployTokenFixture);
+
+            const value = ethers.parseUnits("50", 0);
+            await myToken.approve(addr1.address, value);
+            await expect(
+                myToken.connect(addr1).transferFrom(owner.address, addr1.address, value)
+            ).to.emit(myToken, "Transfer").withArgs(owner.address, addr1.address, value);
         });
     });
 });
